@@ -23,6 +23,7 @@ During implementation, several non-trivial environment constraints were addresse
 2. **Clinical Risk Analytics (Regression Layer)** — Softmax-based Clinical Severity Index (0–100%).
 3. **Medical RAG Module** — FAISS + Gemini synthesis of grounded clinical advisories.
 4. **Clinical Dashboard** — React UI for upload, severity visualization, and Markdown advisory rendering (Phase 4).
+5. **API Containerization (CPU Torch)** — FastAPI image with a CPU-only PyTorch wheel so serving does not ship NVIDIA CUDA libraries.
 
 ## Repository Structure (For Now)
 
@@ -243,3 +244,86 @@ Hybrid-Healthcare-Advisory-System/
 │   └── vision_module/
 └── requirements.txt
 ```
+
+---
+
+## Update: Phase 5 - API Containerization & CPU Torch Image
+**Commit Date:** October 9, 2026  
+**Focus:** Reproducible FastAPI deployment, Docker image size, and a serving-only dependency set
+
+### Key Technical Milestones
+
+#### 1. Why a default `pip install torch` blew up the image
+The production vision path already uses **ONNX Runtime** (`vision_production_v1.onnx`). PyTorch is only required at serve time because `api/retriever.py` loads **HuggingFaceEmbeddings (`all-MiniLM-L6-v2`)** via sentence-transformers.
+
+Pinning `torch==2.10.0` from PyPI on Linux pulls the **CUDA** wheel plus NVIDIA libraries (cuDNN, cuBLAS, CUDA runtime, Triton, …). That is what pushed a naive image toward **~13 GB**. Training on Colab (T4, CUDA Torch) is unchanged; that stack stays in the original `requirements.txt` / notebook environment.
+
+#### 2. Serving vs training requirements
+* **`requirements.txt`** — full local/Colab freeze, including CUDA-capable `torch==2.10.0` as before.
+* **`requirements.api.txt`** — same API/RAG pins **without** a Torch line, so Docker cannot accidentally reinstall the CUDA wheel after the CPU install.
+
+Inference behaviour is unchanged: same ONNX graph, same FAISS `index.faiss` / `index.pkl`, same MiniLM embeddings, same Gemini synthesis. No index rebuild.
+
+#### 3. Dockerfile contract
+* Base: `python:3.11-slim`
+* Install **CPU Torch first**: `torch==2.10.0` from `https://download.pytorch.org/whl/cpu`
+* Then `pip install -r requirements.api.txt` (`--no-cache-dir`)
+* Build fails unless `torch.__version__` contains `+cpu`
+* Copies `api/`, `src/`, `models/`, `data/`; serves with `uvicorn api.main:app --host 0.0.0.0 --port 8000`
+* `.dockerignore` keeps `.env`, git metadata, venvs, notebooks, and dashboard `node_modules` out of the build context
+
+**Measured image (Docker Desktop):** disk usage **~2.8 GB**, content size **~664 MB** (previously ~13 GB).
+
+#### 4. Dashboard ↔ container
+The React dashboard is **not** inside the image. Local Vite (`http://127.0.0.1:5173`) still calls **`http://127.0.0.1:8000/predict/severity`** (`VITE_API_BASE_URL` optional).
+
+Traffic follows the **published host port**, not the container name. `--name healthcare-api` is only for `docker logs` / `docker stop`. Map **`-p 8000:8000`**. CORS already allows the Vite origins.
+
+Run **detached** (`-d`) so the API stays up when the terminal closes. Foreground `docker run` (especially with `--rm`) stops when that session ends.
+
+### How to Run (Docker API + local dashboard)
+
+Requires a local `.env` with `API_KEY` and the gitignored artifacts under `models/` (ONNX + FAISS) so they are copied into the image.
+
+```bash
+# Build (repo root)
+docker build -t healthcare-api .
+
+# Confirm CPU wheel
+docker run --rm healthcare-api python -c "import torch; print(torch.__version__); print('cuda:', torch.cuda.is_available())"
+# Expect: 2.10.0+cpu  and  cuda: False
+
+# Serve in the background
+docker run -d --name healthcare-api -p 8000:8000 --env-file .env healthcare-api
+
+# Dashboard (separate terminal)
+cd dashboard
+npm install
+npm run dev
+```
+
+* Dashboard: http://127.0.0.1:5173  
+* API docs: http://127.0.0.1:8000/docs  
+* Logs: `docker logs -f healthcare-api`  
+* Stop: `docker stop healthcare-api`
+
+The first container start may download **all-MiniLM-L6-v2** from Hugging Face if it is not already cached in the image (needs network). If port 8000 is already taken by local `uvicorn`, stop that process so the dashboard hits the container.
+
+Local non-Docker backend remains: `uvicorn api.main:app --reload --host 0.0.0.0 --port 8000` (Phase 4).
+
+### Updated Project Structure (Phase 5)
+
+```text
+Hybrid-Healthcare-Advisory-System/
+├── .env                         # API_KEY (gitignored; passed via --env-file)
+├── .dockerignore
+├── Dockerfile                   # CPU Torch + requirements.api.txt
+├── requirements.txt             # Local / Colab freeze (includes torch)
+├── requirements.api.txt         # API image deps (Torch installed separately, CPU)
+├── api/
+├── dashboard/                   # Still run on the host
+├── data/                        # Copied into image if present (PDF gitignored)
+├── models/                      # ONNX + FAISS copied into image (binaries gitignored)
+└── src/
+```
+
