@@ -8,17 +8,8 @@ ENV/
 .env
 
 # --- Model Artifacts (Large Files) ---
-# We ignore the heavy .pth and .onnx files to keep the repo lightweight.
-# Note: You should host these on a cloud drive for your dissertation examiners.
 models/*.pth
-models/*.onnx
 models/*.bin
-
-# --- RAG & Vector Database ---
-# FAISS indices and metadata pickles are local artifacts.
-rag_module/faiss_index/
-models/*.faiss
-models/*.pkl
 
 # --- Notebooks & Research ---
 .ipynb_checkpoints
@@ -32,9 +23,6 @@ Thumbs.db
 *.log
 api/temp/*
 
-# Clinical source documents
-*.pdf
-data/*.pdf
 
 # --- Node / Frontend (dashboard) ---
 node_modules/
