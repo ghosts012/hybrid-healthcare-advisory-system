@@ -1,6 +1,26 @@
 # Hybrid Healthcare Advisory System
 A distributed AI pipeline for medical diagnostics, combining cloud-accelerated Deep Learning with local inference and Retrieval-Augmented Generation (RAG).
 
+## ⏸️ Project Status: Paused
+
+This project is **paused** and is kept as a **research / portfolio prototype only**. It is not a medical device, must not be used on real patients, and its output is not medical advice. The reasons are below.
+
+### Why it is paused
+
+1. **Regulation (India).** Software that reads X-rays and suggests treatment falls under regulated medical device software per CDSCO's October 2025 draft guidance on medical device software. The Telemedicine Practice Guidelines (2020) do not allow AI to counsel patients or prescribe, so every report would need review by a licensed doctor.
+2. **Health data rules.** The Digital Personal Data Protection (DPDP) Act and Rules require consent, security safeguards and breach reporting. Sending X-rays to a third-party LLM (Gemini) raises data-processor and cross-border transfer issues; India-hosted infrastructure would be the safer path.
+3. **Model limits.** The classifier is trained on PneumoniaMNIST: 28×28 images of children aged 1–5 from a single hospital, with a known shortcut-learning problem. It is not fit for real patients.
+4. **Data and guideline licences.** MIMIC-CXR requires PhysioNet credentialing and its data must not be sent to cloud LLMs; IU X-Ray is non-commercial; the WHO 2024 guideline used for RAG is CC BY-NC-SA and covers only children under 10.
+5. **Deployment.** Only the Vercel dashboard remains live, as a UI demo.
+
+### Future work (if a clinical partner takes it up)
+
+- A stronger base model such as TorchXRayVision or MedGemma.
+- Routing for low-quality or uncertain images.
+- Reports that check every claim against its retrieved source, with no dosage advice.
+- A doctor review panel using a LangGraph interrupt step.
+- Evaluation with local models and self-hosted Langfuse.
+
 ## Distributed Environment Setup
 Unlike traditional local setups, this system utilizes a Hybrid Development Architecture:
 
