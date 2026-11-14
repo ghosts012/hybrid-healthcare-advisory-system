@@ -1,23 +1,26 @@
 # Hybrid Healthcare Advisory System
 A distributed AI pipeline for medical diagnostics, combining cloud-accelerated Deep Learning with local inference and Retrieval-Augmented Generation (RAG).
+## Project Status: Paused
 
-## ⏸️ Project Status: Paused
+This project is **paused** and maintained strictly as a **research / portfolio prototype**. It is not a medical device, must not be used on real patients, and its output is not medical advice.
 
-This project is **paused** and is kept as a **research / portfolio prototype only**. It is not a medical device, must not be used on real patients, and its output is not medical advice. The reasons are below.
+### Why the project is paused
 
-### Why it is paused
+1. **Regulatory considerations (India).** Software that analyses medical images and suggests treatment may fall under medical device regulations. Healthcare AI also requires appropriate medical professional oversight and cannot independently replace a licensed doctor's judgement.
 
-1. **Regulation (India).** Software that reads X-rays and suggests treatment falls under regulated medical device software per CDSCO's October 2025 draft guidance on medical device software. The Telemedicine Practice Guidelines (2020) do not allow AI to counsel patients or prescribe, so every report would need review by a licensed doctor.
-2. **Health data rules.** The Digital Personal Data Protection (DPDP) Act and Rules require consent, security safeguards and breach reporting. Sending X-rays to a third-party LLM (Gemini) raises data-processor and cross-border transfer issues; India-hosted infrastructure would be the safer path.
-3. **Model limits.** The classifier is trained on PneumoniaMNIST: 28×28 images of children aged 1–5 from a single hospital, with a known shortcut-learning problem. It is not fit for real patients.
-4. **Data and guideline licences.** MIMIC-CXR requires PhysioNet credentialing and its data must not be sent to cloud LLMs; IU X-Ray is non-commercial; the WHO 2024 guideline used for RAG is CC BY-NC-SA and covers only children under 10.
-5. **Deployment.** Only the Vercel dashboard remains live, as a UI demo.
+2. **Health data privacy.** Handling medical images involves sensitive personal data and privacy obligations. Sending X-rays to third-party LLM services (such as Gemini) introduces additional data-processing, security and potential cross-border transfer considerations.
+
+3. **Model limitations.** The classifier is trained on PneumoniaMNIST: 28×28 images of children aged 1–5 from a single hospital, with known generalization and shortcut-learning limitations. It is not suitable for real-world clinical use.
+
+4. **Data and guideline licences.** MIMIC-CXR requires PhysioNet credentialing and compliance with its Data Use Agreement. IU X-Ray has non-commercial usage restrictions. The WHO 2024 guideline used for RAG is licensed under CC BY-NC-SA and covers children up to 10 years of age.
+
+5. **Deployment.** The backend is no longer deployed. Only the Vercel dashboard remains live as a UI demonstration.
 
 ### Future work (if a clinical partner takes it up)
 
 - A stronger base model such as TorchXRayVision or MedGemma.
 - Routing for low-quality or uncertain images.
-- Reports that check every claim against its retrieved source, with no dosage advice.
+- Reports with claim-level source verification, with no dosage advice.
 - A doctor review panel using a LangGraph interrupt step.
 - Evaluation with local models and self-hosted Langfuse.
 
